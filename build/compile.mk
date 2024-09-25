@@ -27,9 +27,14 @@ compile-all: deps-only
 	@mkdir -p $(BUILD_DIR)/$(GOOS)
 	@for b in $(BINS); do \
 		for os in $(COMPILE_OS); do \
-			echo "=== $(PROJECT_NAME) === [ compile          ][$(GOARCH)]:     $(BUILD_DIR)/$$os/$$b"; \
 			BUILD_FILES=`find $(SRCDIR)/cmd/$$b -type f -name "*.go"` ; \
-			CGO_ENABLED=0 GOOS=$$os $(GO) build -ldflags=$(LDFLAGS) -o $(BUILD_DIR)/$$os/$$b $$BUILD_FILES ; \
+			if [ "$$os" = "windows" ]; then \
+				echo "=== $(PROJECT_NAME) === [ compile          ][$(GOARCH)]:     $(BUILD_DIR)/$$os/$$b.exe"; \
+				CGO_ENABLED=0 GOOS=$$os $(GO) build -ldflags=$(LDFLAGS) -o $(BUILD_DIR)/$$os/$$b.exe $$BUILD_FILES ; \
+			else \
+				echo "=== $(PROJECT_NAME) === [ compile          ][$(GOARCH)]:     $(BUILD_DIR)/$$os/$$b"; \
+				CGO_ENABLED=0 GOOS=$$os $(GO) build -ldflags=$(LDFLAGS) -o $(BUILD_DIR)/$$os/$$b $$BUILD_FILES ; \
+			fi \
 		done \
 	done
 
