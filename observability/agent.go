@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// harvester methods are null safe
 	harvester *telemetry.Harvester
 )
 

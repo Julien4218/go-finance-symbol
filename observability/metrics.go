@@ -1,16 +1,11 @@
 package observability
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	METRIC_PORT int = 5000
 )
 
 const (
@@ -20,10 +15,12 @@ const (
 
 type NewRelicCounter interface {
 	Inc()
+	Name() string
 }
 
 type NewRelicGauge interface {
 	Set(value float64)
+	Name() string
 }
 
 type NewRelicMetric struct {
@@ -65,6 +62,10 @@ func createGauge(name string) NewRelicGauge {
 	return &NewRelicMetric{fmt.Sprintf("%s_%s_%s", metric_namespace, metric_subsystem, name)}
 }
 
+func (m *NewRelicMetric) Name() string {
+	return m.name
+}
+
 func (m *NewRelicMetric) Inc() {
 	harvester.RecordMetric(telemetry.Count{
 		Name:      m.name,
@@ -85,8 +86,4 @@ func (m *NewRelicMetric) Set(value float64) {
 			"weekday": weekday,
 		},
 	})
-}
-
-func HarvestNow() {
-	harvester.HarvestNow(context.Background())
 }
