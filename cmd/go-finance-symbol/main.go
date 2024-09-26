@@ -46,17 +46,26 @@ var Command = &cobra.Command{
 				observability.GetOrCreateGauge(fmt.Sprintf("%s_1d", symbol)).Set(price)
 			}
 
-			average, err := getPrevious(symbol, SixMonth)
-			if err != nil {
-				log.Error(err)
-			} else {
-				log.Infof("6-month average price for %s: $%.2f\n", symbol, average)
-				observability.GetOrCreateGauge(fmt.Sprintf("%s_6m", symbol)).Set(average)
-			}
+			gather(symbol, FiveDay)
+			gather(symbol, OneMonth)
+			gather(symbol, ThreeMonth)
+			gather(symbol, SixMonth)
+			gather(symbol, OneYear)
+			gather(symbol, YearToDate)
 
 			observability.HarvestNow()
 		}
 	},
+}
+
+func gather(symbol string, interval IntervalRange) {
+	average, err := getPrevious(symbol, interval)
+	if err != nil {
+		log.Error(err)
+	} else {
+		log.Infof("%s average price for %s: $%.2f\n", interval, symbol, average)
+		observability.GetOrCreateGauge(fmt.Sprintf("%s_%s", symbol, interval)).Set(average)
+	}
 }
 
 // Define a struct to hold the JSON response
