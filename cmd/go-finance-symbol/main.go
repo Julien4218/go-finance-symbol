@@ -35,7 +35,14 @@ var Command = &cobra.Command{
 			return
 		}
 		for _, symbol := range args {
-			s.Execute(symbol)
+			intervals := []s.IntervalRange{
+				s.FiveDay,
+				s.OneMonth,
+				s.ThreeMonth,
+				s.SixMonth,
+				s.OneYear,
+				s.YearToDate}
+			s.Execute(symbol, intervals)
 		}
 		observability.Shutdown()
 	},

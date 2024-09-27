@@ -10,34 +10,11 @@ import (
 	"github.com/Julien4218/go-finance-symbol/observability"
 )
 
-func Execute(symbol string) {
-	price, err := getToday(symbol)
-	if err != nil {
-		observability.Logf("%s", err)
-	} else {
-		observability.Logf("Stock price for %s: $%.2f", symbol, price)
-		observability.GetOrCreateGauge(fmt.Sprintf("%s_1d", symbol)).Set(price)
-	}
+var logf = observability.Logf
+var log = observability.Log
+var restyClientFactoryFunc = getRestyClient
+var baseUrl = "https://query1.finance.yahoo.com/v8/finance/chart"
 
-	gather(symbol, FiveDay)
-	gather(symbol, OneMonth)
-	gather(symbol, ThreeMonth)
-	gather(symbol, SixMonth)
-	gather(symbol, OneYear)
-	gather(symbol, YearToDate)
-}
-
-func gather(symbol string, interval IntervalRange) {
-	average, err := getPrevious(symbol, interval)
-	if err != nil {
-		observability.Logf("%s", err)
-	} else {
-		observability.Logf("%s average price for %s: $%.2f", interval, symbol, average)
-		observability.GetOrCreateGauge(fmt.Sprintf("%s_%s", symbol, interval)).Set(average)
-	}
-}
-
-// Define a struct to hold the JSON response
 type YahooFinanceResponse struct {
 	Chart struct {
 		Result []struct {
@@ -54,10 +31,34 @@ type YahooFinanceResponse struct {
 	} `json:"chart"`
 }
 
+func Execute(symbol string, intervalRanges []IntervalRange) {
+	price, err := getToday(symbol)
+	if err != nil {
+		logf("%s", err)
+	} else {
+		logf("Stock price for %s: $%.2f", symbol, price)
+		observability.GetOrCreateGauge(fmt.Sprintf("%s_1d", symbol)).Set(price)
+	}
+
+	for _, r := range intervalRanges {
+		gather(symbol, r)
+	}
+}
+
+func gather(symbol string, interval IntervalRange) {
+	average, err := getPrevious(symbol, interval)
+	if err != nil {
+		logf("%s", err)
+	} else {
+		logf("%s average price for %s: $%.2f", interval, symbol, average)
+		observability.GetOrCreateGauge(fmt.Sprintf("%s_%s", symbol, interval)).Set(average)
+	}
+}
+
 func getToday(symbol string) (float64, error) {
 	for {
-		url := fmt.Sprintf("https://query1.finance.yahoo.com/v8/finance/chart/%s", symbol)
-		request := getClient(symbol)
+		url := fmt.Sprintf("%s/%s", baseUrl, symbol)
+		request := getClient()
 		resp, err := request.Get(url)
 		if err != nil {
 			return 0, fmt.Errorf("Error fetching stock price: %v", err)
@@ -65,19 +66,17 @@ func getToday(symbol string) (float64, error) {
 
 		// Check for "Too Many Requests" response
 		if resp.StatusCode() == 429 {
-			observability.Log("Rate limit exceeded. Retrying after a delay...")
+			log("Rate limit exceeded. Retrying after a delay...")
 			time.Sleep(10 * time.Second) // Wait for 10 seconds before retrying
 			continue
 		}
 
-		// Parse the JSON response
 		var data YahooFinanceResponse
 		err = json.Unmarshal(resp.Body(), &data)
 		if err != nil {
 			return 0, fmt.Errorf("Error parsing JSON response: %v", err)
 		}
 
-		// Extract and print the stock price
 		if len(data.Chart.Result) > 0 {
 			price := data.Chart.Result[0].Meta.RegularMarketPrice
 			return price, nil
@@ -89,8 +88,8 @@ func getToday(symbol string) (float64, error) {
 
 func getPrevious(symbol string, interval IntervalRange) (float64, error) {
 	for {
-		url := fmt.Sprintf("https://query1.finance.yahoo.com/v8/finance/chart/%s?interval=1d&range=%s", symbol, interval)
-		request := getClient(symbol)
+		url := fmt.Sprintf("%s/%s?interval=1d&range=%s", baseUrl, symbol, interval)
+		request := getClient()
 		resp, err := request.Get(url)
 		if err != nil {
 			return 0, fmt.Errorf("Error fetching stock price: %v", err)
@@ -98,20 +97,18 @@ func getPrevious(symbol string, interval IntervalRange) (float64, error) {
 
 		// Check for "Too Many Requests" response
 		if resp.StatusCode() == 429 {
-			observability.Log("Rate limit exceeded. Retrying after a delay...")
+			log("Rate limit exceeded. Retrying after a delay...")
 			time.Sleep(10 * time.Second) // Wait for 10 seconds before retrying
 			continue
 		}
 
-		// Parse the JSON response
 		var data YahooFinanceResponse
 		err = json.Unmarshal(resp.Body(), &data)
 		if err != nil {
 			return 0, fmt.Errorf("Error parsing JSON response: %v", err)
 		}
 
-		// Calculate the 6-month average
-		if len(data.Chart.Result) > 0 {
+		if len(data.Chart.Result) > 0 && len(data.Chart.Result[0].Indicators.Quote) > 0 {
 			closes := data.Chart.Result[0].Indicators.Quote[0].Close
 			var sum float64
 			var count int
@@ -133,10 +130,13 @@ func getPrevious(symbol string, interval IntervalRange) (float64, error) {
 	}
 }
 
-func getClient(symbol string) *resty.Request {
-	// Create a new Resty client
-	client := resty.New()
+func getClient() *resty.Request {
+	client := restyClientFactoryFunc()
 	return client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0")
+}
+
+func getRestyClient() *resty.Client {
+	return resty.New()
 }
