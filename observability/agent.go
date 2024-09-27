@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
@@ -16,7 +17,7 @@ var (
 func Init() {
 	licenseKey := os.Getenv("NEW_RELIC_LICENSE_KEY")
 	if licenseKey == "" {
-		log.Warn("environment variable NEW_RELIC_LICENSE_KEY not set, skipping instrumentation")
+		Log("environment variable NEW_RELIC_LICENSE_KEY not set, skipping instrumentation")
 		return
 	}
 
@@ -34,9 +35,22 @@ func Init() {
 		log.Error(err)
 		return
 	}
-	log.Infof("NewRelic telemetry initialized")
+	Log("NewRelic telemetry initialized")
 }
 
 func Shutdown() {
 	harvester.HarvestNow(context.Background())
+}
+
+func Log(message string) {
+	log.Infof(message)
+	harvester.RecordLog(
+		telemetry.Log{
+			Message: message,
+		},
+	)
+}
+
+func Logf(format string, args ...interface{}) {
+	Log(fmt.Sprintf(format, args...))
 }

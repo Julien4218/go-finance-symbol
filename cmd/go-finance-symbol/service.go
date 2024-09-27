@@ -8,15 +8,14 @@ import (
 	"github.com/go-resty/resty/v2"
 
 	"github.com/Julien4218/go-finance-symbol/observability"
-	log "github.com/sirupsen/logrus"
 )
 
 func Execute(symbol string) {
 	price, err := getToday(symbol)
 	if err != nil {
-		log.Error(err)
+		observability.Logf("%s", err)
 	} else {
-		log.Infof("Stock price for %s: $%.2f\n", symbol, price)
+		observability.Logf("Stock price for %s: $%.2f\n", symbol, price)
 		observability.GetOrCreateGauge(fmt.Sprintf("%s_1d", symbol)).Set(price)
 	}
 
@@ -31,9 +30,9 @@ func Execute(symbol string) {
 func gather(symbol string, interval IntervalRange) {
 	average, err := getPrevious(symbol, interval)
 	if err != nil {
-		log.Error(err)
+		observability.Logf("%s", err)
 	} else {
-		log.Infof("%s average price for %s: $%.2f\n", interval, symbol, average)
+		observability.Logf("%s average price for %s: $%.2f\n", interval, symbol, average)
 		observability.GetOrCreateGauge(fmt.Sprintf("%s_%s", symbol, interval)).Set(average)
 	}
 }
@@ -66,7 +65,7 @@ func getToday(symbol string) (float64, error) {
 
 		// Check for "Too Many Requests" response
 		if resp.StatusCode() == 429 {
-			log.Info("Rate limit exceeded. Retrying after a delay...\n")
+			observability.Log("Rate limit exceeded. Retrying after a delay...")
 			time.Sleep(10 * time.Second) // Wait for 10 seconds before retrying
 			continue
 		}
@@ -99,7 +98,7 @@ func getPrevious(symbol string, interval IntervalRange) (float64, error) {
 
 		// Check for "Too Many Requests" response
 		if resp.StatusCode() == 429 {
-			log.Info("Rate limit exceeded. Retrying after a delay...\n")
+			observability.Log("Rate limit exceeded. Retrying after a delay...")
 			time.Sleep(10 * time.Second) // Wait for 10 seconds before retrying
 			continue
 		}

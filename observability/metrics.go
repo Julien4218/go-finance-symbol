@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -37,7 +36,7 @@ func init() {
 	weekday = time.Now().Weekday()
 	metricCounters = make(map[string]NewRelicCounter)
 	metricGauges = make(map[string]NewRelicGauge)
-	log.Infof("Metrics initialized")
+	Log("Metrics initialized")
 }
 
 func GetOrCreateCounter(name string) NewRelicCounter {
