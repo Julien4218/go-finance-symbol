@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 
 	"github.com/Julien4218/go-finance-symbol/observability"
-	log "github.com/sirupsen/logrus"
+	s "github.com/Julien4218/go-finance-symbol/symbol"
 	"github.com/spf13/cobra"
 )
 
@@ -31,11 +31,11 @@ var Command = &cobra.Command{
 	Long:             `Execute`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			fmt.Println("Execute with a symbol as a command argument, for example AAPL for apple")
+			observability.Log("Execute with a symbol as a command argument, for example AAPL for apple")
 			return
 		}
 		for _, symbol := range args {
-			Execute(symbol)
+			s.Execute(symbol)
 		}
 		observability.Shutdown()
 	},

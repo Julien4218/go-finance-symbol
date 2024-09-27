@@ -36,7 +36,6 @@ func init() {
 	weekday = time.Now().Weekday()
 	metricCounters = make(map[string]NewRelicCounter)
 	metricGauges = make(map[string]NewRelicGauge)
-	Log("Metrics initialized")
 }
 
 func GetOrCreateCounter(name string) NewRelicCounter {

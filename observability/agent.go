@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -32,7 +31,7 @@ func Init() {
 		harvester, err = telemetry.NewHarvester(key)
 	}
 	if err != nil {
-		log.Error(err)
+		Logf("%s", err)
 		return
 	}
 	Log("NewRelic telemetry initialized")
@@ -43,7 +42,7 @@ func Shutdown() {
 }
 
 func Log(message string) {
-	log.Infof(message)
+	fmt.Println(message)
 	harvester.RecordLog(
 		telemetry.Log{
 			Message: message,
